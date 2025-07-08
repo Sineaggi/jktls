@@ -72,7 +72,7 @@ public class KTlsServer extends Thread implements AutoCloseable {
         });
 
         try {
-            sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext = SSLContext.getInstance("TLSv1.3");
             sslContext.init(createKeyManagers(), null, new SecureRandom());
 
             selector = Selector.open();

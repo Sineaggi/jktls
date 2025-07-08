@@ -41,7 +41,7 @@ task buildNativeLib(type: Exec) {
         !skipNativeBuild()
     }
     workingDir "../native"
-    def args = ["cargo", "build", "--release"]
+    def args = ["/home/cwalker/.cargo/bin/cargo", "build", "--release"]
     def target = rustTarget()
     if (target != null) {
         args += ["--target", target]
@@ -133,4 +133,10 @@ publishing {
 signing {
     required { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
     sign publishing.publications.mavenJava
+}
+
+tasks.named('test', Test) {
+    jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
+    jvmArgs('--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    jvmArgs('--add-opens', 'java.base/sun.security.ssl=ALL-UNNAMED')
 }

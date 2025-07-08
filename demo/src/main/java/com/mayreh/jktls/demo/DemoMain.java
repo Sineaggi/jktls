@@ -1,7 +1,7 @@
 package com.mayreh.jktls.demo;
 
 import com.mayreh.jktls.testing.KTlsServer;
-import lombok.extern.slf4j.Slf4j;
+//import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Slf4j
+//@Slf4j
 public class DemoMain {
     public static void main(String[] args) throws Exception {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 9090;
@@ -27,7 +27,7 @@ public class DemoMain {
         KTlsServer tlsServer = new KTlsServer(port, new String[]{"TLS_RSA_WITH_AES_128_GCM_SHA256"});
         tlsServer.setHandler((channel, m) -> {
             String message = new String(m, StandardCharsets.UTF_8).trim();
-            log.info("Received: {}", message);
+            //log.info("Received: {}", message);
             if ("lorem-ipsum".equals(message)) {
                 fileChannel.position(0);
                 channel.transferFrom(fileChannel, 0, fileChannel.size());
@@ -44,7 +44,7 @@ public class DemoMain {
                 fileChannel.close();
                 Utils.delete(resourceDir);
             } catch (IOException e) {
-                log.error("Failed to delete directory: {}", resourceDir);
+                //log.error("Failed to delete directory: {}", resourceDir);
                 throw new UncheckedIOException(e);
             }
         }));

@@ -47,6 +47,10 @@ impl TlsCryptoInfo {
                 version: TlsVersion::Tls12,
                 cipher_type: CipherType::AesGcm128,
             }),
+            ("TLSv1.2", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") => Ok(Self {
+                version: TlsVersion::Tls12,
+                cipher_type: CipherType::AesGcm128,
+            }),
             _ => Err(KTlsError::UnsupportedOperation {
                 msg: format!(
                     "Unsupported: protocol={}, cipherSuite={}",
