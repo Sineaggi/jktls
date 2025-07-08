@@ -1,21 +1,19 @@
 package com.mayreh.jktls.testing;
 
+import com.mayreh.jktls.testing.KTlsServer.Handler;
 import org.junit.rules.ExternalResource;
 
-import com.mayreh.jktls.testing.KTlsServer.Handler;
-
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 public class KTlsServerClientRule extends ExternalResource {
     private KTlsServer server;
-    @Getter
     private TlsClient client;
     private final String[] enabledCipherSuites;
 
     public KTlsServerClientRule() {
         this(null);
+    }
+
+    public KTlsServerClientRule(String[] enabledCipherSuites) {
+        this.enabledCipherSuites = enabledCipherSuites;
     }
 
     public int port() {
@@ -39,5 +37,9 @@ public class KTlsServerClientRule extends ExternalResource {
         server.close();
         client.close();
         super.after();
+    }
+
+    public TlsClient getClient() {
+        return this.client;
     }
 }

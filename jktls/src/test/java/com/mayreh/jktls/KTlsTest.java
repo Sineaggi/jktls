@@ -1,6 +1,9 @@
 package com.mayreh.jktls;
 
-import static org.junit.Assert.assertEquals;
+import com.mayreh.jktls.testing.KTlsServerClientRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -8,11 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import com.mayreh.jktls.testing.KTlsServerClientRule;
+import static org.junit.Assert.assertEquals;
 
 public class KTlsTest {
     @Rule

@@ -1,10 +1,10 @@
 package com.mayreh.jktls;
 
-import static com.mayreh.jktls.reflection.Utils.doReflection;
-import static com.mayreh.jktls.reflection.Utils.getField;
-
 import java.io.FileDescriptor;
 import java.lang.reflect.Field;
+
+import static com.mayreh.jktls.reflection.Utils.doReflection;
+import static com.mayreh.jktls.reflection.Utils.getField;
 
 public final class FDUtil {
     private static final Field fd = getField(FileDescriptor.class, "fd");

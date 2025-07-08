@@ -1,28 +1,27 @@
 package com.mayreh.jktls.sun.security.ssl;
 
+import com.mayreh.jktls.sun.security.ssl.SSLWriteCipher.WriteCipherContextExtractor.T12Gcm;
+
+import javax.crypto.spec.SecretKeySpec;
+import java.lang.reflect.Field;
+import java.util.Optional;
+
 import static com.mayreh.jktls.reflection.Utils.classForName;
 import static com.mayreh.jktls.reflection.Utils.doReflection;
 import static com.mayreh.jktls.reflection.Utils.getField;
 
-import java.lang.reflect.Field;
-import java.util.Optional;
-
-import javax.crypto.spec.SecretKeySpec;
-
-import com.mayreh.jktls.sun.security.ssl.SSLWriteCipher.WriteCipherContextExtractor.T12Gcm;
-
-import lombok.RequiredArgsConstructor;
-import lombok.Value;
-
 /**
  * Mirror of `sun.security.ssl.SSLCipher$SSLWriteCipher` for exposure
  */
-@RequiredArgsConstructor
 public class SSLWriteCipher {
     private static final Class<?> clazz = classForName("sun.security.ssl.SSLCipher$SSLWriteCipher");
     private static final Field authenticator = getField(clazz, "authenticator");
 
     private final Object obj;
+
+    public SSLWriteCipher(Object obj) {
+        this.obj = obj;
+    }
 
     public Authenticator authenticator() {
         return new Authenticator(doReflection(() -> authenticator.get(obj)));
@@ -40,19 +39,69 @@ public class SSLWriteCipher {
     /**
      * Context information to configure kTLS socket's parameters
      */
-    @Value
-    public static class WriteCipherContext {
-        byte[] iv;
-        byte[] key;
-        byte[] salt;
-        byte[] recSeq;
+    public static final class WriteCipherContext {
+        private final byte[] iv;
+        private final byte[] key;
+        private final byte[] salt;
+        private final byte[] recSeq;
+
+        public WriteCipherContext(byte[] iv, byte[] key, byte[] salt, byte[] recSeq) {
+            this.iv = iv;
+            this.key = key;
+            this.salt = salt;
+            this.recSeq = recSeq;
+        }
+
+        public byte[] getIv() {
+            return this.iv;
+        }
+
+        public byte[] getKey() {
+            return this.key;
+        }
+
+        public byte[] getSalt() {
+            return this.salt;
+        }
+
+        public byte[] getRecSeq() {
+            return this.recSeq;
+        }
+
+        public boolean equals(final Object o) {
+            if (o == this) return true;
+            if (!(o instanceof WriteCipherContext)) return false;
+            final WriteCipherContext other = (WriteCipherContext) o;
+            if (!java.util.Arrays.equals(this.getIv(), other.getIv())) return false;
+            if (!java.util.Arrays.equals(this.getKey(), other.getKey())) return false;
+            if (!java.util.Arrays.equals(this.getSalt(), other.getSalt())) return false;
+            if (!java.util.Arrays.equals(this.getRecSeq(), other.getRecSeq())) return false;
+            return true;
+        }
+
+        public int hashCode() {
+            final int PRIME = 59;
+            int result = 1;
+            result = result * PRIME + java.util.Arrays.hashCode(this.getIv());
+            result = result * PRIME + java.util.Arrays.hashCode(this.getKey());
+            result = result * PRIME + java.util.Arrays.hashCode(this.getSalt());
+            result = result * PRIME + java.util.Arrays.hashCode(this.getRecSeq());
+            return result;
+        }
+
+        public String toString() {
+            return "SSLWriteCipher.WriteCipherContext(iv=" + java.util.Arrays.toString(this.getIv()) + ", key=" + java.util.Arrays.toString(this.getKey()) + ", salt=" + java.util.Arrays.toString(this.getSalt()) + ", recSeq=" + java.util.Arrays.toString(this.getRecSeq()) + ")";
+        }
     }
 
-    @RequiredArgsConstructor
     public enum WriteCipherType {
         T12_GCM(new T12Gcm()),
         ;
         final WriteCipherContextExtractor extractor;
+
+        WriteCipherType(WriteCipherContextExtractor extractor) {
+            this.extractor = extractor;
+        }
 
         boolean isSupported(SSLWriteCipher cipher) {
             return extractor.clazz.isInstance(cipher.obj);
@@ -64,6 +113,7 @@ public class SSLWriteCipher {
      */
     abstract static class WriteCipherContextExtractor {
         final Class<?> clazz;
+
         protected WriteCipherContextExtractor(Class<?> clazz) {
             this.clazz = clazz;
         }

@@ -1,5 +1,8 @@
 package com.mayreh.jktls.demo;
 
+import com.mayreh.jktls.testing.KTlsServer;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -8,10 +11,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
-import com.mayreh.jktls.testing.KTlsServer;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class DemoMain {
