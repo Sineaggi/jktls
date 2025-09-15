@@ -1,6 +1,12 @@
 package com.mayreh.jktls;
 
 import java.io.IOException;
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SymbolLookup;
+import java.lang.foreign.ValueLayout;
+import java.lang.invoke.MethodHandle;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
@@ -31,12 +37,36 @@ public class KTlsSocketChannel implements ByteChannel,
         this.impl = impl;
     }
 
+    private static final MethodHandle sendfile64Handle;
+    static {
+        Linker linker = Linker.nativeLinker();
+        SymbolLookup stdLib = linker.defaultLookup();
+        MemorySegment sendfile64Address = stdLib.find("sendfile64")
+                .orElseThrow(() -> new RuntimeException("sendfile64 not found"));
+        FunctionDescriptor sendfile64Descriptor = FunctionDescriptor.of(
+                ValueLayout.JAVA_LONG,
+                ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_INT,
+                ValueLayout.ADDRESS,
+                ValueLayout.JAVA_LONG
+        );
+        sendfile64Handle = linker.downcallHandle(sendfile64Address, sendfile64Descriptor);
+    }
+
     private static native void setTcpUlp(int fd, String name);
 
     private static native void setTlsTx(
             int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq);
 
-    private static native long sendFile(int outFd, int inFd, long position, long count);
+    private static long sendFile(int outFd, int inFd, long position, long count) {
+        try {
+            return (long) sendfile64Handle.invokeExact(outFd, inFd, MemorySegment.ofAddress(position), count);
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
 
     private final SocketChannel delegate;
     private final SocketChannelImpl impl;
