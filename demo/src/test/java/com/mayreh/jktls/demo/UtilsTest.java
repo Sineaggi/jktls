@@ -1,26 +1,22 @@
 package com.mayreh.jktls.demo;
 
-import static org.junit.Assert.assertFalse;
-
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class UtilsTest {
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
-
     @Test
-    public void testDelete() throws Exception {
-        File testDir = folder.newFolder("test");
-        Files.write(testDir.toPath().resolve("foo.txt"),
+    public void testDelete(@TempDir Path folder) throws Exception {
+        Path testDir = Files.createDirectories(folder.resolve("test"));
+        Files.write(testDir.resolve("foo.txt"),
                     "foo bar baz".getBytes(StandardCharsets.UTF_8));
 
-        Utils.delete(testDir.toPath());
-        assertFalse(testDir.exists());
+        Utils.delete(testDir);
+        assertFalse(Files.exists(testDir));
     }
 }

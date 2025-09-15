@@ -1,8 +1,10 @@
-apply plugin: "java-library"
+plugins {
+    id("java-library")
+}
 
 dependencies {
     runtimeOnly "ch.qos.logback:logback-classic:1.2.11"
-    implementation "junit:junit:$junitVersion"
+    implementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
     implementation "org.slf4j:slf4j-api:1.7.36"
     implementation project(":jktls")
 }

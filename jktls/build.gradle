@@ -28,17 +28,14 @@ static def targetArch() {
     throw new RuntimeException("architecture not supported: " + System.getProperty("os.arch"))
 }
 
-static def rustTarget() {
+static String rustTarget() {
     System.getenv("RUST_TARGET")
 }
 
-static def skipNativeBuild() {
-    System.getenv("SKIP_NATIVE_BUILD") == "1"
-}
-
-task buildNativeLib(type: Exec) {
+tasks.register("buildNativeLib", Exec) {
+    def skipNativeBuild = providers.environmentVariable("SKIP_NATIVE_BUILD")
     onlyIf {
-        !skipNativeBuild()
+        skipNativeBuild.orNull != "1"
     }
     workingDir "../native"
     def args = ["cargo", "build", "--release"]
@@ -49,7 +46,7 @@ task buildNativeLib(type: Exec) {
     commandLine args
 }
 
-task copyNativeLib(type: Copy) {
+tasks.register("copyNativeLib", Copy) {
     dependsOn "buildNativeLib"
     def target = rustTarget()
     if (target != null) {
@@ -69,7 +66,7 @@ processResources {
     }
 }
 
-task universalJar(type: Jar) {
+tasks.register("universalJar", Jar) {
     dependsOn "jar"
     archiveClassifier.set("universal")
     from(zipTree(jar.outputs.files.singleFile)) {
@@ -83,17 +80,23 @@ java {
     withSourcesJar()
 }
 
+tasks.withType(Test).configureEach {
+    jvmArgs("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED")
+    jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED")
+    jvmArgs("--add-opens=java.base/sun.security.ssl=ALL-UNNAMED")
+}
+
 publishing {
     repositories {
         maven {
             if (isReleaseVersion) {
-                url("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+                url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
             } else {
-                url("https://oss.sonatype.org/content/repositories/snapshots/")
+                url = "https://oss.sonatype.org/content/repositories/snapshots/"
             }
             credentials {
-                username findProperty("sonatypeUsername")
-                password findProperty("sonatypePassword")
+                username = findProperty("sonatypeUsername")
+                password = findProperty("sonatypePassword")
             }
         }
     }
@@ -131,6 +134,6 @@ publishing {
 }
 
 signing {
-    required { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
+    required = { isReleaseVersion && gradle.taskGraph.hasTask("publish") }
     sign publishing.publications.mavenJava
 }

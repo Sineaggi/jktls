@@ -1,20 +1,20 @@
 package com.mayreh.jktls.testing;
 
-import org.junit.rules.ExternalResource;
-
 import com.mayreh.jktls.testing.KTlsServer.Handler;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 @RequiredArgsConstructor
-public class KTlsServerClientRule extends ExternalResource {
+public class KTlsServerClientExtension implements BeforeEachCallback, AfterEachCallback {
     private KTlsServer server;
     @Getter
     private TlsClient client;
     private final String[] enabledCipherSuites;
 
-    public KTlsServerClientRule() {
+    public KTlsServerClientExtension() {
         this(null);
     }
 
@@ -27,17 +27,15 @@ public class KTlsServerClientRule extends ExternalResource {
     }
 
     @Override
-    protected void before() throws Throwable {
-        super.before();
+    public void beforeEach(ExtensionContext context) {
         server = new KTlsServer(0, enabledCipherSuites);
         server.start();
         client = new TlsClient("localhost", server.getPort());
     }
 
     @Override
-    protected void after() {
+    public void afterEach(ExtensionContext context) {
         server.close();
         client.close();
-        super.after();
     }
 }
