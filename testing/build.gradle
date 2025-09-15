@@ -3,8 +3,6 @@ plugins {
 }
 
 dependencies {
-    runtimeOnly "ch.qos.logback:logback-classic:1.2.11"
-    implementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
-    implementation "org.slf4j:slf4j-api:1.7.36"
+    implementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     implementation project(":jktls")
 }

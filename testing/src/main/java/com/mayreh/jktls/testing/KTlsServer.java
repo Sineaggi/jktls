@@ -28,14 +28,12 @@ import com.mayreh.jktls.KTlsSocketChannel;
 import com.mayreh.jktls.KTlsSocketOptions;
 import com.mayreh.jktls.TlsCryptoInfo;
 
-import org.slf4j.Logger;
-
 /**
  * Reference implementation of TCP server that uses kernel TLS for data encryption.
  * The code is highly inspired by alkarn's <a href="https://github.com/alkarn/sslengine.example">sslengine.example</a>
  */
 public class KTlsServer extends Thread implements AutoCloseable {
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(KTlsServer.class);
+    private static final System.Logger logger = System.getLogger(KTlsServer.class.getName());
 
     public int getPort() {
         return this.port;
@@ -112,7 +110,7 @@ public class KTlsServer extends Thread implements AutoCloseable {
                     }
                 }
             } catch (IOException e) {
-                log.error("Exception occurred", e);
+                logger.log(System.Logger.Level.ERROR, "Exception occurred", e);
             }
         }
     }
@@ -131,7 +129,7 @@ public class KTlsServer extends Thread implements AutoCloseable {
             connection.channel.setOption(KTlsSocketOptions.TLS_TX, TlsCryptoInfo.from(engine));
             socketChannel.register(selector, SelectionKey.OP_READ, connection);
         } else {
-            log.warn("Closing the channel due to handshake failure");
+            logger.log(System.Logger.Level.WARNING, "Closing the channel due to handshake failure");
             socketChannel.close();
         }
     }
@@ -160,7 +158,7 @@ public class KTlsServer extends Thread implements AutoCloseable {
                                 connection.engine.getSession().getPacketBufferSize());
                         break;
                     case CLOSED:
-                        log.warn("Closed");
+                        logger.log(System.Logger.Level.WARNING, "Closed");
                         break;
                     case OK:
                         connection.peerAppData.flip();

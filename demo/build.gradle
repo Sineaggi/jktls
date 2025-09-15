@@ -12,8 +12,9 @@ application {
 }
 
 dependencies {
-    runtimeOnly "ch.qos.logback:logback-classic:1.2.11"
-    implementation "org.slf4j:slf4j-api:1.7.36"
+    runtimeOnly "org.slf4j:slf4j-jdk-platform-logging:2.0.17"
+    runtimeOnly "ch.qos.logback:logback-classic:1.5.18"
+    implementation "org.slf4j:slf4j-api:2.0.17"
     implementation project(":jktls")
     implementation project(":testing")
 }

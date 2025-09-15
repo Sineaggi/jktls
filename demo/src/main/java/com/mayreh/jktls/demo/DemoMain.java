@@ -11,10 +11,8 @@ import java.nio.file.Path;
 
 import com.mayreh.jktls.testing.KTlsServer;
 
-import org.slf4j.Logger;
-
 public class DemoMain {
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(DemoMain.class);
+    private static final System.Logger logger = System.getLogger(DemoMain.class.getName());
 
     public static void main(String[] args) throws Exception {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 9090;
@@ -29,7 +27,7 @@ public class DemoMain {
         KTlsServer tlsServer = new KTlsServer(port, new String[]{"TLS_RSA_WITH_AES_128_GCM_SHA256"});
         tlsServer.setHandler((channel, m) -> {
             String message = new String(m, StandardCharsets.UTF_8).trim();
-            log.info("Received: {}", message);
+            logger.log(System.Logger.Level.INFO, "Received: {0}", message);
             if ("lorem-ipsum".equals(message)) {
                 fileChannel.position(0);
                 channel.transferFrom(fileChannel, 0, fileChannel.size());
@@ -46,7 +44,7 @@ public class DemoMain {
                 fileChannel.close();
                 Utils.delete(resourceDir);
             } catch (IOException e) {
-                log.error("Failed to delete directory: {}", resourceDir);
+                logger.log(System.Logger.Level.INFO, "Failed to delete directory: {0}", resourceDir);
                 throw new UncheckedIOException(e);
             }
         }));
