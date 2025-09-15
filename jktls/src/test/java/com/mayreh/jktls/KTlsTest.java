@@ -2,7 +2,6 @@ package com.mayreh.jktls;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +37,7 @@ public class KTlsTest {
     @Timeout(value = 15, unit = TimeUnit.SECONDS)
     public void testSendfile(@TempDir Path folder) throws Exception {
         Path file = folder.resolve("file.tmp");
-        Files.write(file, "sendfile!!\n".getBytes(StandardCharsets.UTF_8));
+        Files.writeString(file, "sendfile!!\n");
         try (FileChannel fileChannel = FileChannel.open(file)) {
             extension.setHandler((channel, message) -> {
                 channel.transferFrom(fileChannel, 0, fileChannel.size());
