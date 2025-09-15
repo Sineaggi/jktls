@@ -33,10 +33,6 @@ subprojects {
         isReleaseVersion = !version.endsWith('-SNAPSHOT')
     }
 
-    dependencies {
-        testImplementation "org.assertj:assertj-core:3.21.0"
-    }
-
     testing {
         suites {
             test {
