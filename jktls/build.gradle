@@ -20,6 +20,10 @@ java {
     withSourcesJar()
 }
 
+tasks.withType(Javadoc).configureEach {
+    exclude 'com/mayreh/jktls/tls/**'
+}
+
 tasks.withType(Test).configureEach {
     jvmArgs("--add-opens=java.base/sun.nio.ch=ALL-UNNAMED")
     jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED")
