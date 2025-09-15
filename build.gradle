@@ -19,8 +19,14 @@ subprojects {
     group = "com.mayreh.jktls"
     version = "${version}" + (snapshot.toBoolean() ? "-SNAPSHOT" : "")
 
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(22)
+        }
+    }
+
     tasks.withType(JavaCompile).configureEach {
-        options.release = 17
+        options.release = 22
     }
 
     repositories {
