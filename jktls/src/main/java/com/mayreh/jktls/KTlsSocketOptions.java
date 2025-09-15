@@ -2,9 +2,6 @@ package com.mayreh.jktls;
 
 import java.net.SocketOption;
 
-import lombok.Value;
-import lombok.experimental.Accessors;
-
 /**
  * Defines the socket options to enable kernel TLS.
  */
@@ -23,10 +20,9 @@ public final class KTlsSocketOptions {
     public static final SocketOption<TlsCryptoInfo> TLS_TX =
             new SockOption<>("TLS_TX", TlsCryptoInfo.class);
 
-    @Value
-    @Accessors(fluent = true)
-    private static class SockOption<T> implements SocketOption<T> {
-        String name;
-        Class<T> type;
+    private record SockOption<T>(
+        String name,
+        Class<T> type
+    ) implements SocketOption<T> {
     }
 }

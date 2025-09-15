@@ -15,13 +15,9 @@ import java.util.Set;
 import com.mayreh.jktls.sun.nio.ch.FileChannelImpl;
 import com.mayreh.jktls.sun.nio.ch.SocketChannelImpl;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-
 /**
  * A wrapper around {@link SocketChannel} with some tweaks to utilize kernel TLS.
  */
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public class KTlsSocketChannel implements ByteChannel,
                                           ScatteringByteChannel,
                                           GatheringByteChannel,
@@ -30,9 +26,16 @@ public class KTlsSocketChannel implements ByteChannel,
         NativeLoader.load();
     }
 
+    KTlsSocketChannel(SocketChannel delegate, SocketChannelImpl impl) {
+        this.delegate = delegate;
+        this.impl = impl;
+    }
+
     private static native void setTcpUlp(int fd, String name);
+
     private static native void setTlsTx(
             int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq);
+
     private static native long sendFile(int outFd, int inFd, long position, long count);
 
     private final SocketChannel delegate;

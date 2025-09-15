@@ -4,6 +4,11 @@ plugins {
 
 application {
     mainClass = "com.mayreh.jktls.demo.DemoMain"
+    applicationDefaultJvmArgs = [
+            "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+            "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--add-opens=java.base/sun.security.ssl=ALL-UNNAMED"
+    ]
 }
 
 dependencies {

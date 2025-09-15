@@ -11,10 +11,11 @@ import java.nio.file.Path;
 
 import com.mayreh.jktls.testing.KTlsServer;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
-@Slf4j
 public class DemoMain {
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(DemoMain.class);
+
     public static void main(String[] args) throws Exception {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 9090;
 

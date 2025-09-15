@@ -28,31 +28,35 @@ import com.mayreh.jktls.KTlsSocketChannel;
 import com.mayreh.jktls.KTlsSocketOptions;
 import com.mayreh.jktls.TlsCryptoInfo;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 
 /**
  * Reference implementation of TCP server that uses kernel TLS for data encryption.
  * The code is highly inspired by alkarn's <a href="https://github.com/alkarn/sslengine.example">sslengine.example</a>
  */
-@Slf4j
 public class KTlsServer extends Thread implements AutoCloseable {
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(KTlsServer.class);
+
+    public int getPort() {
+        return this.port;
+    }
+
+    public void setHandler(Handler handler) {
+        this.handler = handler;
+    }
+
     @FunctionalInterface
     public interface Handler {
         void handleIncomingMessage(KTlsSocketChannel channel, byte[] message) throws IOException;
     }
 
     private final String[] enabledCipherSuites;
-    @Getter
     private final int port;
     private final ExecutorService taskExecutor;
     private final SSLContext sslContext;
     private final Selector selector;
     private final ServerSocketChannel serverSocketChannel;
 
-    @Setter
     private volatile Handler handler;
 
     private volatile boolean running;
@@ -317,7 +321,6 @@ public class KTlsServer extends Thread implements AutoCloseable {
         return newBuffer;
     }
 
-    @AllArgsConstructor
     static class Connection {
         final KTlsSocketChannel channel;
         final SSLEngine engine;
@@ -325,5 +328,14 @@ public class KTlsServer extends Thread implements AutoCloseable {
         ByteBuffer netData;
         ByteBuffer peerAppData;
         ByteBuffer peerNetData;
+
+        public Connection(KTlsSocketChannel channel, SSLEngine engine, ByteBuffer appData, ByteBuffer netData, ByteBuffer peerAppData, ByteBuffer peerNetData) {
+            this.channel = channel;
+            this.engine = engine;
+            this.appData = appData;
+            this.netData = netData;
+            this.peerAppData = peerAppData;
+            this.peerNetData = peerNetData;
+        }
     }
 }

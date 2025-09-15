@@ -20,7 +20,7 @@ subprojects {
     version = "${version}" + (snapshot.toBoolean() ? "-SNAPSHOT" : "")
 
     tasks.withType(JavaCompile).configureEach {
-        options.release = 11
+        options.release = 17
     }
 
     repositories {
@@ -29,16 +29,11 @@ subprojects {
     }
 
     ext {
-        lombokVersion = '1.18.22'
         junitVersion = '5.13.4'
         isReleaseVersion = !version.endsWith('-SNAPSHOT')
     }
 
     dependencies {
-        compileOnly "org.projectlombok:lombok:$lombokVersion"
-        annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-        testCompileOnly "org.projectlombok:lombok:$lombokVersion"
-        testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
         testImplementation "org.assertj:assertj-core:3.21.0"
     }
 

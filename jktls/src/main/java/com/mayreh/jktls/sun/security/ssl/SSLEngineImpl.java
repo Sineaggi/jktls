@@ -6,16 +6,17 @@ import static com.mayreh.jktls.reflection.Utils.getField;
 
 import java.lang.reflect.Field;
 
-import lombok.RequiredArgsConstructor;
-
 /**
  * Mirror of `sun.security.ssl.SSLEngineImpl` for exposure
  */
-@RequiredArgsConstructor
 public class SSLEngineImpl {
     private static final Class<?> clazz = classForName("sun.security.ssl.SSLEngineImpl");
     private static final Field conContext = getField(clazz, "conContext");
     private final Object obj;
+
+    public SSLEngineImpl(Object obj) {
+        this.obj = obj;
+    }
 
     public TransportContext conContext() {
         return new TransportContext(doReflection(() -> conContext.get(obj)));

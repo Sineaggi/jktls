@@ -11,18 +11,18 @@ import javax.crypto.spec.SecretKeySpec;
 
 import com.mayreh.jktls.sun.security.ssl.SSLWriteCipher.WriteCipherContextExtractor.T12Gcm;
 
-import lombok.RequiredArgsConstructor;
-import lombok.Value;
-
 /**
  * Mirror of `sun.security.ssl.SSLCipher$SSLWriteCipher` for exposure
  */
-@RequiredArgsConstructor
 public class SSLWriteCipher {
     private static final Class<?> clazz = classForName("sun.security.ssl.SSLCipher$SSLWriteCipher");
     private static final Field authenticator = getField(clazz, "authenticator");
 
     private final Object obj;
+
+    public SSLWriteCipher(Object obj) {
+        this.obj = obj;
+    }
 
     public Authenticator authenticator() {
         return new Authenticator(doReflection(() -> authenticator.get(obj)));
@@ -40,19 +40,22 @@ public class SSLWriteCipher {
     /**
      * Context information to configure kTLS socket's parameters
      */
-    @Value
-    public static class WriteCipherContext {
-        byte[] iv;
-        byte[] key;
-        byte[] salt;
-        byte[] recSeq;
+    public record WriteCipherContext(
+        byte[] iv,
+        byte[] key,
+        byte[] salt,
+        byte[] recSeq
+    ) {
     }
 
-    @RequiredArgsConstructor
     public enum WriteCipherType {
         T12_GCM(new T12Gcm()),
         ;
         final WriteCipherContextExtractor extractor;
+
+        WriteCipherType(WriteCipherContextExtractor extractor) {
+            this.extractor = extractor;
+        }
 
         boolean isSupported(SSLWriteCipher cipher) {
             return extractor.clazz.isInstance(cipher.obj);
@@ -64,6 +67,7 @@ public class SSLWriteCipher {
      */
     abstract static class WriteCipherContextExtractor {
         final Class<?> clazz;
+
         protected WriteCipherContextExtractor(Class<?> clazz) {
             this.clazz = clazz;
         }
