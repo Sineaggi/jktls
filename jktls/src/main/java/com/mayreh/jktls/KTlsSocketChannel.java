@@ -4,11 +4,15 @@ import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.StructLayout;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -48,8 +52,13 @@ public class KTlsSocketChannel implements ByteChannel,
     private static int TCP_ULP = 31;
     private static int TLS_TX = 1;
 
+    private static final Linker.Option ccs = Linker.Option.captureCallState("errno");
+    private static final StructLayout capturedStateLayout = Linker.Option.captureStateLayout();
+    private static final VarHandle errnoHandle = capturedStateLayout.varHandle(MemoryLayout.PathElement.groupElement("errno"));
+
     private static final MethodHandle setsockoptHandle;
     private static final MethodHandle sendfile64Handle;
+    private static final MethodHandle strerror;
     static {
         Linker linker = Linker.nativeLinker();
         SymbolLookup stdLib = linker.defaultLookup();
@@ -62,7 +71,7 @@ public class KTlsSocketChannel implements ByteChannel,
                 ValueLayout.ADDRESS,
                 ValueLayout.JAVA_LONG
         );
-        sendfile64Handle = linker.downcallHandle(sendfile64Address, sendfile64Descriptor);
+        sendfile64Handle = linker.downcallHandle(sendfile64Address, sendfile64Descriptor, ccs);
         MemorySegment setsockoptAddress = stdLib.find("setsockopt")
                 .orElseThrow(() -> new RuntimeException("setsockopt not found"));
         FunctionDescriptor setsockoptDescriptor = FunctionDescriptor.of(
@@ -73,19 +82,29 @@ public class KTlsSocketChannel implements ByteChannel,
                 ValueLayout.ADDRESS,
                 ValueLayout.JAVA_INT
         );
-        setsockoptHandle = linker.downcallHandle(setsockoptAddress, setsockoptDescriptor);
+        setsockoptHandle = linker.downcallHandle(setsockoptAddress, setsockoptDescriptor, ccs);
+
+        strerror = linker.downcallHandle(
+                stdLib.find("strerror").orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
     }
 
     private static void setTcpUlp(int fd, String name) {
         try (var arena = Arena.ofConfined()) {
+            MemorySegment capturedState = arena.allocate(capturedStateLayout);
             var n = arena.allocateFrom(name);
-            setsockoptHandle.invoke(
+            int ret = (int) setsockoptHandle.invoke(
+                    capturedState,
                     fd,
                     SOL_TCP,
                     TCP_ULP,
                     n,
                     Math.toIntExact(n.byteSize())
             );
+            if (ret == -1) {
+                String errorString = errnoCode(errnoHandle, capturedState, strerror);
+                throw new RuntimeException("Failed to set TCP_ULP: " + errorString);
+            }
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
@@ -96,6 +115,7 @@ public class KTlsSocketChannel implements ByteChannel,
     private static void setTlsTx(
             int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq) {
         try (var arena = Arena.ofConfined()) {
+            MemorySegment capturedState = arena.allocate(capturedStateLayout);
             MemorySegment m = switch (protocol) {
                 case "TLSv1.2" -> switch (cipherSuite) {
                     case "TLS_RSA_WITH_AES_128_GCM_SHA256" -> {
@@ -118,13 +138,18 @@ public class KTlsSocketChannel implements ByteChannel,
                 default ->
                         throw new UnsupportedOperationException("Unsupported: protocol=" + protocol + ", cipherSuite=" + cipherSuite);
             };
-            setsockoptHandle.invoke(
+            int ret = (int) setsockoptHandle.invoke(
+                    capturedState,
                     fd,
                     SOL_TLS,
                     TLS_TX,
                     m,
                     Math.toIntExact(m.byteSize())
             );
+            if (ret == -1) {
+                String errorString = errnoCode(errnoHandle, capturedState, strerror);
+                throw new SocketException("Failed to set TLS_TX: " + errorString);
+            }
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
@@ -133,13 +158,38 @@ public class KTlsSocketChannel implements ByteChannel,
     }
 
     private static long sendFile(int outFd, int inFd, long position, long count) {
-        try {
-            return (long) sendfile64Handle.invokeExact(outFd, inFd, MemorySegment.ofAddress(position), count);
+        try (var arena = Arena.ofConfined()) {
+            MemorySegment capturedState = arena.allocate(capturedStateLayout);
+            var ret = (long) sendfile64Handle.invokeExact(capturedState, outFd, inFd, MemorySegment.ofAddress(position), count);
+            if (ret == -1) {
+                String errorString = errnoCode(errnoHandle, capturedState, strerror);
+                throw new SocketException("Failed to send file: " + errorString);
+            }
+            return ret;
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
+    }
+
+    private static String errnoCode(
+            VarHandle errnoHandle,
+            MemorySegment capturedState,
+            MethodHandle strerror) throws Throwable {
+
+        // Get more information by consulting the value of errno:
+        int errno = (int) errnoHandle.get(capturedState, 0);
+
+        // An errno value of 2 (ENOENT) is "No such file or directory"
+        System.out.println("errno: " + errno);
+
+        // Convert errno code to a string message:
+        String errorString = ((MemorySegment) strerror.invokeExact(errno))
+                .reinterpret(Long.MAX_VALUE).getString(0);
+        System.out.println("errno string: " + errorString);
+
+        return errorString;
     }
 
     private final SocketChannel delegate;
