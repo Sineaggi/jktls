@@ -6,66 +6,6 @@ dependencies {
     testImplementation project(":testing")
 }
 
-static def targetOs() {
-    def os = System.getProperty("os.name").toLowerCase()
-    if (os.contains("linux")) {
-        return "linux"
-    }
-    if (os.contains("mac os") || os.contains("darwin")) {
-        return "macos"
-    }
-    throw new RuntimeException("platform not supported: " + System.getProperty("os.name"))
-}
-
-static def targetArch() {
-    def arch = System.getProperty("os.arch").toLowerCase()
-    if (arch.contains("x86_64") || arch.contains("amd64")) {
-        return "x86_64"
-    }
-    if (arch.contains("aarch64") || arch.contains("arm64")) {
-        return "aarch64"
-    }
-    throw new RuntimeException("architecture not supported: " + System.getProperty("os.arch"))
-}
-
-static String rustTarget() {
-    System.getenv("RUST_TARGET")
-}
-
-tasks.register("buildNativeLib", Exec) {
-    def skipNativeBuild = providers.environmentVariable("SKIP_NATIVE_BUILD")
-    onlyIf {
-        skipNativeBuild.orNull != "1"
-    }
-    workingDir "../native"
-    def args = ["cargo", "build", "--release"]
-    def target = rustTarget()
-    if (target != null) {
-        args += ["--target", target]
-    }
-    commandLine args
-}
-
-tasks.register("copyNativeLib", Copy) {
-    dependsOn "buildNativeLib"
-    def target = rustTarget()
-    if (target != null) {
-        from "../native/target/$target/release"
-    } else {
-        from "../native/target/release"
-    }
-    include "*.so", "*.dylib"
-    rename "^libjktls", "libjktls-${targetArch()}-${targetOs()}"
-    into new File(project.buildDir, "native")
-}
-
-processResources {
-    dependsOn "copyNativeLib"
-    from(new File(project.buildDir, "native")) {
-        include "libjktls*"
-    }
-}
-
 tasks.register("universalJar", Jar) {
     dependsOn "jar"
     archiveClassifier.set("universal")
