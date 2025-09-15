@@ -21,6 +21,11 @@ import java.util.Set;
 
 import com.mayreh.jktls.sun.nio.ch.FileChannelImpl;
 import com.mayreh.jktls.sun.nio.ch.SocketChannelImpl;
+import com.mayreh.jktls.tls.tls12_crypto_info_aes_gcm_128;
+import com.mayreh.jktls.tls.tls_crypto_info;
+
+import static com.mayreh.jktls.tls.tls_h.TLS_1_2_VERSION;
+import static com.mayreh.jktls.tls.tls_h.TLS_CIPHER_AES_GCM_128;
 
 /**
  * A wrapper around {@link SocketChannel} with some tweaks to utilize kernel TLS.
@@ -88,8 +93,44 @@ public class KTlsSocketChannel implements ByteChannel,
         }
     }
 
-    private static native void setTlsTx(
-            int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq);
+    private static void setTlsTx(
+            int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq) {
+        try (var arena = Arena.ofConfined()) {
+            MemorySegment m = switch (protocol) {
+                case "TLSv1.2" -> switch (cipherSuite) {
+                    case "TLS_RSA_WITH_AES_128_GCM_SHA256" -> {
+                        var struct = tls12_crypto_info_aes_gcm_128.allocate(arena);
+
+                        var info = tls12_crypto_info_aes_gcm_128.info(struct);
+                        tls_crypto_info.version(info, (short) TLS_1_2_VERSION());
+                        tls_crypto_info.cipher_type(info, (short) TLS_CIPHER_AES_GCM_128());
+                        tls12_crypto_info_aes_gcm_128.info(struct);
+                        tls12_crypto_info_aes_gcm_128.iv(struct).asByteBuffer().put(iv);
+                        tls12_crypto_info_aes_gcm_128.key(struct).asByteBuffer().put(key);
+                        tls12_crypto_info_aes_gcm_128.salt(struct).asByteBuffer().put(salt);
+                        tls12_crypto_info_aes_gcm_128.rec_seq(struct).asByteBuffer().put(recSeq);
+
+                        yield struct;
+                    }
+                    default ->
+                            throw new UnsupportedOperationException("Unsupported: protocol=" + protocol + ", cipherSuite=" + cipherSuite);
+                };
+                default ->
+                        throw new UnsupportedOperationException("Unsupported: protocol=" + protocol + ", cipherSuite=" + cipherSuite);
+            };
+            setsockoptHandle.invoke(
+                    fd,
+                    SOL_TLS,
+                    TLS_TX,
+                    m,
+                    Math.toIntExact(m.byteSize())
+            );
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
 
     private static long sendFile(int outFd, int inFd, long position, long count) {
         try {
