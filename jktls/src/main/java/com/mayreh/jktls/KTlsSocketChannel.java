@@ -1,6 +1,7 @@
 package com.mayreh.jktls;
 
 import java.io.IOException;
+import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
 import java.lang.foreign.MemorySegment;
@@ -37,6 +38,12 @@ public class KTlsSocketChannel implements ByteChannel,
         this.impl = impl;
     }
 
+    private static int SOL_TCP = 6;
+    private static int SOL_TLS = 282;
+    private static int TCP_ULP = 31;
+    private static int TLS_TX = 1;
+
+    private static final MethodHandle setsockoptHandle;
     private static final MethodHandle sendfile64Handle;
     static {
         Linker linker = Linker.nativeLinker();
@@ -51,9 +58,35 @@ public class KTlsSocketChannel implements ByteChannel,
                 ValueLayout.JAVA_LONG
         );
         sendfile64Handle = linker.downcallHandle(sendfile64Address, sendfile64Descriptor);
+        MemorySegment setsockoptAddress = stdLib.find("setsockopt")
+                .orElseThrow(() -> new RuntimeException("setsockopt not found"));
+        FunctionDescriptor setsockoptDescriptor = FunctionDescriptor.of(
+                ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_INT,
+                ValueLayout.ADDRESS,
+                ValueLayout.JAVA_INT
+        );
+        setsockoptHandle = linker.downcallHandle(setsockoptAddress, setsockoptDescriptor);
     }
 
-    private static native void setTcpUlp(int fd, String name);
+    private static void setTcpUlp(int fd, String name) {
+        try (var arena = Arena.ofConfined()) {
+            var n = arena.allocateFrom(name);
+            setsockoptHandle.invoke(
+                    fd,
+                    SOL_TCP,
+                    TCP_ULP,
+                    n,
+                    Math.toIntExact(n.byteSize())
+            );
+        } catch (Error | RuntimeException ex) {
+            throw ex;
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
 
     private static native void setTlsTx(
             int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq);
