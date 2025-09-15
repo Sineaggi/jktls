@@ -147,22 +147,22 @@ public class KTlsServer extends Thread implements AutoCloseable {
                         connection.peerNetData,
                         connection.peerAppData);
                 switch (engineResult.getStatus()) {
-                    case BUFFER_OVERFLOW:
+                    case BUFFER_OVERFLOW -> {
                         connection.peerAppData = grow(
                                 connection.peerAppData,
                                 connection.engine.getSession().getApplicationBufferSize());
-                        break;
-                    case BUFFER_UNDERFLOW:
+                    }
+                    case BUFFER_UNDERFLOW -> {
                         connection.peerNetData = handlePacketBufferUnderflow(
                                 connection.peerNetData,
                                 connection.engine.getSession().getPacketBufferSize());
-                        break;
-                    case CLOSED:
+                    }
+                    case CLOSED -> {
                         logger.log(System.Logger.Level.WARNING, "Closed");
-                        break;
-                    case OK:
+                    }
+                    case OK -> {
                         connection.peerAppData.flip();
-                        break;
+                    }
                 }
             }
 
@@ -193,7 +193,7 @@ public class KTlsServer extends Thread implements AutoCloseable {
         while (handshakeStatus != HandshakeStatus.FINISHED &&
                handshakeStatus != HandshakeStatus.NOT_HANDSHAKING) {
             switch (handshakeStatus) {
-                case NEED_UNWRAP:
+                case NEED_UNWRAP -> {
                     if (socketChannel.read(peerNetData) < 0) {
                         if (engine.isInboundDone() && engine.isOutboundDone()) {
                             return null;
@@ -208,59 +208,61 @@ public class KTlsServer extends Thread implements AutoCloseable {
                     peerNetData.compact();
                     handshakeStatus = engine.getHandshakeStatus();
                     switch (engineResult.getStatus()) {
-                        case BUFFER_OVERFLOW:
+                        case BUFFER_OVERFLOW -> {
                             peerAppData = grow(peerAppData, engine.getSession().getApplicationBufferSize());
-                            break;
-                        case BUFFER_UNDERFLOW:
+                        }
+                        case BUFFER_UNDERFLOW -> {
                             peerNetData = handlePacketBufferUnderflow(
                                     peerNetData,
                                     engine.getSession().getApplicationBufferSize());
-                            break;
-                        case CLOSED:
+                        }
+                        case CLOSED -> {
                             if (engine.isOutboundDone()) {
                                 return null;
                             }
                             engine.closeOutbound();
                             handshakeStatus = engine.getHandshakeStatus();
-                            break;
-                        case OK:
-                            break;
+                        }
+                        case OK -> {
+                        }
                     }
-                    break;
-                case NEED_WRAP:
+                }
+                case NEED_WRAP -> {
                     netData.clear();
                     engineResult = engine.wrap(appData, netData);
                     handshakeStatus = engineResult.getHandshakeStatus();
                     switch (engineResult.getStatus()) {
-                        case BUFFER_OVERFLOW:
+                        case BUFFER_OVERFLOW -> {
                             netData = grow(netData, engine.getSession().getPacketBufferSize());
-                            break;
-                        case BUFFER_UNDERFLOW:
+                        }
+                        case BUFFER_UNDERFLOW -> {
                             throw new IllegalStateException("Should not happen");
-                        case CLOSED:
+                        }
+                        case CLOSED -> {
                             netData.flip();
                             while (netData.hasRemaining()) {
                                 socketChannel.write(netData);
                             }
                             peerNetData.clear();
-                            break;
-                        case OK:
+                        }
+                        case OK -> {
                             netData.flip();
                             while (netData.hasRemaining()) {
                                 socketChannel.write(netData);
                             }
-                            break;
+                        }
                     }
-                    break;
-                case NEED_TASK:
+                }
+                case NEED_TASK -> {
                     Runnable task;
                     while ((task = engine.getDelegatedTask()) != null) {
                         taskExecutor.execute(task);
                     }
                     handshakeStatus = engine.getHandshakeStatus();
-                    break;
-                default:
+                }
+                default -> {
                     throw new IllegalStateException("Bug. Got status: " + handshakeStatus);
+                }
             }
         }
 
