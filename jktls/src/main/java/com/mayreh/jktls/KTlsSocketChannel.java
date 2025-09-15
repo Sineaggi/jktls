@@ -38,10 +38,6 @@ public class KTlsSocketChannel implements ByteChannel,
                                           ScatteringByteChannel,
                                           GatheringByteChannel,
                                           NetworkChannel {
-    static {
-        NativeLoader.load();
-    }
-
     KTlsSocketChannel(SocketChannel delegate, SocketChannelImpl impl) {
         this.delegate = delegate;
         this.impl = impl;
@@ -89,7 +85,7 @@ public class KTlsSocketChannel implements ByteChannel,
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
     }
 
-    private static void setTcpUlp(int fd, String name) {
+    private static void setTcpUlp(int fd, String name) throws SocketException {
         try (var arena = Arena.ofConfined()) {
             MemorySegment capturedState = arena.allocate(capturedStateLayout);
             var n = arena.allocateFrom(name);
@@ -105,6 +101,8 @@ public class KTlsSocketChannel implements ByteChannel,
                 String errorString = errnoCode(errnoHandle, capturedState, strerror);
                 throw new RuntimeException("Failed to set TCP_ULP: " + errorString);
             }
+        } catch (SocketException s) {
+            throw s;
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
@@ -113,7 +111,7 @@ public class KTlsSocketChannel implements ByteChannel,
     }
 
     private static void setTlsTx(
-            int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq) {
+            int fd, String protocol, String cipherSuite, byte[] iv, byte[] key, byte[] salt, byte[] recSeq) throws SocketException {
         try (var arena = Arena.ofConfined()) {
             MemorySegment capturedState = arena.allocate(capturedStateLayout);
             MemorySegment m = switch (protocol) {
@@ -150,6 +148,8 @@ public class KTlsSocketChannel implements ByteChannel,
                 String errorString = errnoCode(errnoHandle, capturedState, strerror);
                 throw new SocketException("Failed to set TLS_TX: " + errorString);
             }
+        } catch (SocketException s) {
+            throw s;
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
@@ -157,7 +157,7 @@ public class KTlsSocketChannel implements ByteChannel,
         }
     }
 
-    private static long sendFile(int outFd, int inFd, long position, long count) {
+    private static long sendFile(int outFd, int inFd, long position, long count) throws SocketException {
         try (var arena = Arena.ofConfined()) {
             MemorySegment capturedState = arena.allocate(capturedStateLayout);
             var ret = (long) sendfile64Handle.invokeExact(capturedState, outFd, inFd, MemorySegment.ofAddress(position), count);
@@ -166,6 +166,8 @@ public class KTlsSocketChannel implements ByteChannel,
                 throw new SocketException("Failed to send file: " + errorString);
             }
             return ret;
+        } catch (SocketException s) {
+            throw new RuntimeException(s);
         } catch (Error | RuntimeException ex) {
             throw ex;
         } catch (Throwable ex$) {
@@ -202,7 +204,7 @@ public class KTlsSocketChannel implements ByteChannel,
         return new KTlsSocketChannel(channel, new SocketChannelImpl(channel));
     }
 
-    public long transferFrom(FileChannel channel, long position, long count) {
+    public long transferFrom(FileChannel channel, long position, long count) throws IOException {
         if (FileChannelImpl.isInstance(channel)) {
             FileChannelImpl fileChannel = new FileChannelImpl(channel);
             return sendFile(FDUtil.fdVal(impl.getFD()),
